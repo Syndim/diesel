@@ -18,6 +18,17 @@ pub struct RawConnection {
 impl RawConnection {
     pub fn establish(database_url: &str) -> ConnectionResult<Self> {
         let mut conn_pointer = ptr::null_mut();
+
+        let mut database_url_splited = database_url.split('?');
+        let database_url = database_url_splited.next();
+        let password = database_url_splited.next();
+        if database_url.is_none() || password.is_none() {
+            return Err(ConnectionError::InvalidConnectionUrl(String::from("Invalid password")));
+        }
+
+        let database_url = database_url.unwrap();
+        let password = password.unwrap();
+
         let database_url = CString::new(database_url)?;
         let connection_status =
             unsafe { ffi::sqlite3_open(database_url.as_ptr(), &mut conn_pointer) };
@@ -25,9 +36,12 @@ impl RawConnection {
         match connection_status {
             ffi::SQLITE_OK => {
                 let conn_pointer = unsafe { NonNull::new_unchecked(conn_pointer) };
-                Ok(RawConnection {
+                let conn = RawConnection {
                     internal_connection: conn_pointer,
-                })
+                };
+                let _ = conn.exec(&format!("PRAGMA KEY = '{}'", password))
+                    .map_err(|e| ConnectionError::BadConnection(format!("{}", e)))?;
+                Ok(conn)
             }
             err_code => {
                 let message = super::error_message(err_code);
