@@ -19,11 +19,11 @@ impl RawConnection {
     pub fn establish(database_url: &str) -> ConnectionResult<Self> {
         let mut conn_pointer = ptr::null_mut();
 
-        let mut database_url_splited = database_url.split('?');
-        let database_url = database_url_splited.next();
-        let password = database_url_splited.next();
+        let mut database_url_split = database_url.split(':');
+        let database_url = database_url_split.next();
+        let password = database_url_split.next();
         if database_url.is_none() || password.is_none() {
-            return Err(ConnectionError::InvalidConnectionUrl(String::from("Invalid password")));
+            return Err(ConnectionError::InvalidConnectionUrl(String::from("Invalid database url")));
         }
 
         let database_url = database_url.unwrap();
